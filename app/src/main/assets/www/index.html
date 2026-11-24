@@ -41,7 +41,7 @@ grid-auto-columns:max(var(--minw),calc(100% / var(--n)))}
 #vs{flex:1;min-height:0;position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}#vt{position:absolute;inset:0;will-change:transform}#vt.sd{transition:transform .25s cubic-bezier(.22,.8,.25,1)}
 .vsl{position:absolute;inset:0;will-change:transform}#vt.sm .vsl{transition:transform .3s cubic-bezier(.22,.8,.25,1)}
 .vsl img{display:block;width:100%;height:100%;object-fit:contain;transform-origin:center;pointer-events:none;-webkit-user-drag:none;backface-visibility:hidden}.vsl img.an{transition:transform .22s ease-out}
-dialog{border:1px solid var(--ln);border-radius:14px;background:var(--sf);color:var(--ink);width:min(92vw,380px);padding:16px}dialog::backdrop{background:#000b}
+dialog{border:1px solid #444;border-radius:14px;background:#111;color:var(--ink);width:min(92vw,380px);padding:16px;box-shadow:0 8px 32px #000a}dialog::backdrop{background:#000c}
 dialog h2{margin:0 0 4px;font-size:16px}dialog p{margin:0 0 10px;color:var(--mu);font-size:12px}dialog .b{display:block;width:100%;margin-top:6px;text-align:left;height:42px}
 #toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#000;border:1px solid #333;color:#fff;border-radius:10px;padding:9px 14px;z-index:40;display:flex;gap:12px;align-items:center;box-shadow:0 4px 16px #0005}
 #toast[hidden]{display:none}#toast button{border:0;background:none;color:#8cc5ff;font-weight:700}
@@ -640,13 +640,15 @@ $('#sdt').textContent=must?'Welcome — choose how to start':'Storage folder';
 $('#sdp').textContent=(must?'You are asked this only once on this device. Import a project zip you already have, or select where projects are stored. ':'')+(canDir()?'Tap the button below. Your device’s folder picker opens; choose (or create) a folder and confirm. Every change is then saved there automatically as one .zip per project. Nothing goes to the cloud.'+frameNote():dirWhy());
 $('#spath').textContent=dirH?'Current: '+dirH.name:'No folder chosen';$('#sch').hidden=!canDir();$('#sset').hidden=true;$('#sskip').hidden=!must;$('#sskip').textContent='Continue without a folder';$('#simp').hidden=!must;$('#scx').hidden=must;
 $('#simp').onclick=async()=>{if(busy)return;busy=true;try{const fs=await pickZips();if(!fs.length)return;const n=await importFiles(fs,false,false);if(n){if(!dirH){mode='manual';await kset('setup','manual')}$('#spath').textContent='Imported '+n+' project'+(n>1?'s':'');$('#sskip').hidden=false;$('#sskip').textContent='Continue'}}finally{busy=false}};
-const fin=v=>{if(done)return;done=true;d.close();ok(v)};
+const fin=v=>{if(done)return;done=true;try{d.close()}catch{}ok(v)};
 $('#sch').onclick=async()=>{if(busy)return;let h;try{h=await showDirectoryPicker({id:'sbs-reader',mode:'readwrite'})}catch(e){pickErr(e);return}
 busy=true;try{try{if(await h.requestPermission({mode:'readwrite'})!=='granted'){toast('Permission needed to save in this folder');return}}catch{}
 $('#spath').textContent='Storage folder: '+h.name;
 dirH=h;mode='folder';await kset('dir',h);await kset('setup','folder');setFix(false);lab.textContent='Reading folder…';const n=await restoreFromFolder();projs.forEach(p=>dirtyP.add(p.id));projs.sort((a,b)=>(b.u||0)-(a.u||0));save(1);fl();toast(`Storage set to “${h.name}”`+(n?` · found ${n} project${n>1?'s':''}`:''));fin(true)}finally{busy=false}};
 $('#sskip').onclick=async()=>{mode='manual';await kset('setup','manual');fl();lab.textContent='Saved on this device';fin(false)};
-$('#scx').onclick=()=>fin(false);d.oncancel=e=>{e.preventDefault();if(!must)fin(false)};d.showModal()})}
+$('#scx').onclick=()=>fin(false);d.oncancel=e=>{e.preventDefault();if(!must)fin(false)};
+try{if(typeof d.showModal==='function')d.showModal();else{/* no dialog support — auto continue */mode='manual';kset('setup','manual');fin(false)}}catch(e){console.warn('setup dialog failed',e);mode='manual';try{kset('setup','manual')}catch{}fin(false)}
+})}
 function pickZips(){return new Promise(async res=>{if(typeof window.showOpenFilePicker==='function'&&window.isSecureContext){try{const hs=await showOpenFilePicker({multiple:true,id:'sbs-import',types:[{description:'Reader project (zip)',accept:{'application/zip':['.zip']}}]});res(await Promise.all(hs.map(h=>h.getFile())));return}catch(e){if(e&&e.name==='AbortError'){res([]);return}}}
 const i=document.createElement('input');i.type='file';i.accept='.zip,application/zip,application/x-zip-compressed';i.multiple=true;i.onchange=()=>res([...i.files]);i.oncancel=()=>res([]);i.click()})}
 /* change path: pick a new folder, move every project zip there, remove them from the old folder */
@@ -685,31 +687,44 @@ async function importPick(){if(typeof window.showOpenFilePicker==='function'&&wi
 const homeMenu=()=>[['Import project (zip)…',importPick],...(dirH?[['Reload from storage folder',async()=>{lab.textContent='Reading folder…';const n=await restoreFromFolder();if(n){save(1);renderHome()}toast(n?`Loaded ${n} project${n>1?'s':''}`:'Nothing new in the folder');lab.textContent='Saved to '+dirH.name}]]:[]),(canDir()?[dirH?'Change storage path…':'Set storage path…',changePath]:['Storage info…',()=>runSetup(false)]),['Export all as zip',exportAll],...(ip?[['Install app',inst]]:[]),...(/^https?:/.test(location.protocol)&&navigator.share?[['Share app link',()=>navigator.share({title:document.title,url:location.href.split(/[?#]/)[0]}).catch(()=>{})]]:[])];
 $('#hm').onclick=e=>menu(e.currentTarget,homeMenu());
 /* boot */
-(async()=>{let setup=null;try{db=await new Promise((ok,no)=>{const r=indexedDB.open('sbs4',2);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('k'))d.createObjectStore('k');if(!d.objectStoreNames.contains('items'))d.createObjectStore('items',{keyPath:'id'});if(!d.objectStoreNames.contains('thumbs'))d.createObjectStore('thumbs')};r.onsuccess=()=>{r.result.onversionchange=()=>r.result.close();ok(r.result)};r.onerror=()=>no(r.error)});
-const tx=db.transaction(['k','items','thumbs']),[PL,L,all,sd,dh,tk,tv]=await Promise.all([rq(tx.objectStore('k').get('projects')),rq(tx.objectStore('k').get('layout')),rq(tx.objectStore('items').getAll()),rq(tx.objectStore('k').get('setup')),rq(tx.objectStore('k').get('dir')),rq(tx.objectStore('thumbs').getAllKeys()),rq(tx.objectStore('thumbs').getAll())]);
-all.forEach(i=>items.set(i.id,i));tk.forEach((k,i)=>{if(tv[i])thumbs.set(k,tv[i])});setup=sd||null;if(dh&&dh.kind==='directory')dirH=dh;
-if(PL){projs=PL.list||[];st=projs.find(p=>p.id===PL.cur)||null}else if(L){projs=[{id:uid(),name:'My project',cols:L.cols,x:L.x||0,sc:L.sc||{},u:Date.now()}];st=projs[0]}}catch{db=null}
-if(!setup){try{setup=localStorage.getItem('sbs-setup')||null}catch{}}
-if(!setup&&(projs.length||dirH)){setup=dirH?'folder':'manual';kset('setup',setup)}
-ready=true;
-if(!db)toast('Saving is unavailable in this browser mode. Use ⋮ → Export all as zip to keep your work.');
-if(setup==='folder'&&!dirH&&canDir())toast('Storage folder needs to be chosen again: ⋮ → Set storage path…');
-if(dirH&&setup==='folder'){fl();if(!await hasPerm())setFix(true);else lab.textContent='Saved to '+dirH.name}else lab.textContent=db?'Saved on this device':'Saved in this session';
-const sp=new URLSearchParams(location.search),inbox=sp.get('inbox')==='1';
-let first=false;
-const forceSetup=sp.get('forceSetup')==='1';
-if(forceSetup){
-  setup=null;
-  try{localStorage.removeItem('sbs-setup')}catch{}
-  try{if(db){const tx=db.transaction('k','readwrite');tx.objectStore('k').delete('setup');await new Promise((ok,no)=>{tx.oncomplete=ok;tx.onerror=()=>no(tx.error)})}}catch{}
+(async()=>{
+lab.textContent='Starting…';
+let setup=null,first=false;
+try{
+  try{db=await new Promise((ok,no)=>{const r=indexedDB.open('sbs4',2);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('k'))d.createObjectStore('k');if(!d.objectStoreNames.contains('items'))d.createObjectStore('items',{keyPath:'id'});if(!d.objectStoreNames.contains('thumbs'))d.createObjectStore('thumbs')};r.onsuccess=()=>{r.result.onversionchange=()=>r.result.close();ok(r.result)};r.onerror=()=>no(r.error)});
+  const tx=db.transaction(['k','items','thumbs']),[PL,L,all,sd,dh,tk,tv]=await Promise.all([rq(tx.objectStore('k').get('projects')),rq(tx.objectStore('k').get('layout')),rq(tx.objectStore('items').getAll()),rq(tx.objectStore('k').get('setup')),rq(tx.objectStore('k').get('dir')),rq(tx.objectStore('thumbs').getAllKeys()),rq(tx.objectStore('thumbs').getAll())]);
+  all.forEach(i=>items.set(i.id,i));tk.forEach((k,i)=>{if(tv[i])thumbs.set(k,tv[i])});setup=sd||null;if(dh&&dh.kind==='directory')dirH=dh;
+  if(PL){projs=PL.list||[];st=projs.find(p=>p.id===PL.cur)||null}else if(L){projs=[{id:uid(),name:'My project',cols:L.cols,x:L.x||0,sc:L.sc||{},u:Date.now()}];st=projs[0]}}catch(e){console.warn('idb',e);db=null}
+  if(!setup){try{setup=localStorage.getItem('sbs-setup')||null}catch{}}
+  if(!setup&&(projs.length||dirH)){setup=dirH?'folder':'manual';try{kset('setup',setup)}catch{}}
+  ready=true;
+  if(!db)try{toast('Saving is unavailable in this browser mode. Use ⋮ → Export all as zip to keep your work.')}catch{}
+  if(setup==='folder'&&!dirH&&canDir())try{toast('Storage folder needs to be chosen again: ⋮ → Set storage path…')}catch{}
+  if(dirH&&setup==='folder'){try{fl();if(!await hasPerm())setFix(true);else lab.textContent='Saved to '+dirH.name}catch{lab.textContent='Saved on this device'}}else lab.textContent=db?'Saved on this device':'Saved in this session';
+  const sp=new URLSearchParams(location.search),inbox=sp.get('inbox')==='1';
+  const forceSetup=sp.get('forceSetup')==='1';
+  if(forceSetup){
+    setup=null;
+    try{localStorage.removeItem('sbs-setup')}catch{}
+    try{if(db){const tx=db.transaction('k','readwrite');tx.objectStore('k').delete('setup');await new Promise((ok,no)=>{tx.oncomplete=ok;tx.onerror=()=>no(tx.error)})}}catch{}
+  }
+  if(!setup||forceSetup){
+    first=true;
+    try{await runSetup(true)}catch(e){console.warn('runSetup',e);mode='manual';try{await kset('setup','manual')}catch{}}
+  }
+  try{fl()}catch{}
+  if(!st&&first&&projs.length===1)st=projs[0];
+  if(st)openP(st.id);else goHome();
+  if(dirH&&dirtyP.size===0&&projs.length){try{if(await hasPerm()){projs.forEach(p=>{if(!p.file)dirtyP.add(p.id)});diskFlush()}}catch{}}
+  if(inbox){try{history.replaceState(null,'',location.pathname);const c=await caches.open('sbs-inbox'),ks=await c.keys(),fs=[];for(const k of ks){const r=await c.match(k);fs.push(new File([await r.blob()],decodeURIComponent(r.headers.get('x-name')||'shared.zip'),{type:'application/zip'}));await c.delete(k)}if(fs.length)await importFiles(fs,true,false)}catch(e){console.warn(e)}}
+  if('launchQueue'in window)try{launchQueue.setConsumer(async lp=>{if(!lp.files||!lp.files.length)return;const fs=[];for(const h of lp.files)fs.push(await h.getFile());importFiles(fs,true,false)})}catch{}
+  try{document.fonts?.ready.then(restore);addEventListener('load',restore);guard()}catch{}
+}catch(e){
+  console.error('boot failed',e);
+  ready=true;
+  lab.textContent='Ready';
+  try{goHome()}catch{}
 }
-if(!setup||forceSetup){first=true;await runSetup(true)}
-fl();
-if(!st&&first&&projs.length===1)st=projs[0];
-if(st)openP(st.id);else goHome();
-if(dirH&&dirtyP.size===0&&projs.length&&await hasPerm()){projs.forEach(p=>{if(!p.file)dirtyP.add(p.id)});diskFlush()}
-if(inbox){history.replaceState(null,'',location.pathname);try{const c=await caches.open('sbs-inbox'),ks=await c.keys(),fs=[];for(const k of ks){const r=await c.match(k);fs.push(new File([await r.blob()],decodeURIComponent(r.headers.get('x-name')||'shared.zip'),{type:'application/zip'}));await c.delete(k)}if(fs.length)await importFiles(fs,true,false)}catch(e){console.warn(e)}}
-if('launchQueue'in window)launchQueue.setConsumer(async lp=>{if(!lp.files||!lp.files.length)return;const fs=[];for(const h of lp.files)fs.push(await h.getFile());importFiles(fs,true,false)});
-document.fonts?.ready.then(restore);addEventListener('load',restore);guard()})();
+})();
 })();
 </script></body></html>
