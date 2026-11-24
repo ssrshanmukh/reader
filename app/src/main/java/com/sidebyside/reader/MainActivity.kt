@@ -90,11 +90,18 @@ class MainActivity : AppCompatActivity() {
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         settings.cacheMode = WebSettings.LOAD_DEFAULT
         settings.setSupportZoom(true)
-        settings.builtInZoomControls = false
+        // builtInZoomControls must be true for pinch-to-zoom to work in WebView;
+        // displayZoomControls=false hides the +/- buttons so only pinch works.
+        settings.builtInZoomControls = true
         settings.displayZoomControls = false
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
         settings.javaScriptCanOpenWindowsAutomatically = true
+        // Prefer text reflow off so layout stays stable while zooming
+        try {
+            settings.setTextZoom(100)
+        } catch (_: Exception) {}
+
         // Needed for File System Access API polyfills / modern APIs in WebView
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.safeBrowsingEnabled = false
