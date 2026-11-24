@@ -17,17 +17,18 @@ button{font:inherit;color:inherit;cursor:pointer}
 .b{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;min-width:36px;padding:0 10px;border:1px solid var(--ln);border-radius:9px;background:var(--sf);font-weight:600;transition:background .15s,transform .1s}
 .b:hover:not(:disabled){background:var(--as);border-color:var(--ac)}.b:active{transform:scale(.96)}.b:disabled{opacity:.4;cursor:default}
 @media(max-width:600px){.lb{display:none}}
-#cols{position:relative;flex:1;min-height:0;display:grid;grid-auto-flow:column;grid-template-rows:minmax(0,1fr);gap:0;overflow-x:auto;overflow-y:hidden;background:var(--sf);border:0;border-radius:0;scrollbar-width:thin;overscroll-behavior:contain;touch-action:pan-x pan-y;
+#cols{position:relative;flex:1;min-height:0;display:grid;grid-auto-flow:column;grid-template-rows:minmax(0,1fr);gap:0;overflow-x:auto;overflow-y:hidden;background:var(--sf);border:0;border-radius:0;scrollbar-width:thin;overscroll-behavior:contain;touch-action:pan-x pan-y pinch-zoom;-webkit-overflow-scrolling:touch;
 grid-auto-columns:max(var(--minw),calc(100% / var(--n)))}
-.col{contain:layout paint;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.col{contain:layout paint style;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
 .col.over{outline:2px dashed var(--ac);outline-offset:-3px}
 .col header{display:flex;align-items:center;gap:1px;flex:none;height:var(--hh);margin:0;padding:0 2px 0 8px;border-radius:0;background:var(--hd);border-bottom:1px solid var(--ln)}
 .col:not(:first-of-type){border-left:1px solid var(--ln)}
 .t{flex:1;min-width:0;border:0;background:none;color:inherit;font:650 12px system-ui;padding:2px;border-radius:6px}.t:focus{outline:2px solid var(--ac)}
-.i{display:grid;place-items:center;padding:0;width:28px;height:calc(var(--hh) - 2px);border:0;border-radius:7px;background:none;color:var(--mu);flex:none;transition:background .15s,color .15s,transform .1s}.i:hover{background:var(--as);color:var(--ac)}.i.d:hover{color:var(--dg)}
-.sc{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y;scrollbar-width:none;-webkit-overflow-scrolling:touch}.sc::-webkit-scrollbar{display:none}
+.i{display:grid;place-items:center;padding:0;width:28px;height:calc(var(--hh) - 2px);border:0;border-radius:7px;background:none;color:var(--mu);flex:none;transition:background .15s,color .15s,transform .1s,box-shadow .15s}.i:hover{background:var(--as);color:var(--ac)}.i.d:hover{color:var(--dg)}
+.sc{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y pinch-zoom;scrollbar-width:none;-webkit-overflow-scrolling:touch}.sc::-webkit-scrollbar{display:none}
 .zm .sc,.zm #cols{overscroll-behavior:auto}
 .list{position:relative;min-height:100%}
+.it{content-visibility:auto;contain-intrinsic-size:auto 240px}
 .list:empty::before{content:"Drop images here, or use the add-image button";display:grid;place-items:center;min-height:120px;color:var(--mu);padding:16px;text-align:center}
 .it{position:relative;width:100%;background:#0d0d0d;line-height:0}
 .it img{display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none;cursor:zoom-in}
@@ -90,10 +91,10 @@ html,body{overscroll-behavior:none}
 #lock .l{display:none}#lock.on .l{display:block}#lock.on .u{display:none}
 #lock.on{background:#000;border-color:var(--ac);color:var(--ac)}.app[data-v=home] #lock{display:none}
 /* locked: ONE scroller moves every column together, so nothing can drift or be re-adjusted */
-#cols.lk{overflow:auto;grid-template-rows:minmax(min-content,1fr)}
+#cols.lk{overflow:auto;grid-template-rows:minmax(min-content,1fr);-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-x pan-y pinch-zoom;will-change:scroll-position}
 #cols.lk .col{contain:none;overflow:visible}
-#cols.lk .sc{overflow:visible;flex:1 0 auto;min-height:auto}
-#cols.lk .col header{position:sticky;top:0;z-index:5}
+#cols.lk .sc{overflow:visible;flex:1 0 auto;min-height:auto;touch-action:pan-x pan-y pinch-zoom}
+#cols.lk .col header{position:sticky;top:0;z-index:5;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 @supports selector(::-webkit-scrollbar){#cols{scrollbar-width:auto}#cols::-webkit-scrollbar{height:6px;width:0}#cols::-webkit-scrollbar-thumb{background:var(--ln);border-radius:3px}}
 
 /* selection + column drag */
@@ -104,10 +105,10 @@ html,body{overscroll-behavior:none}
 .col.cdrag{opacity:.45}.col.cover{outline:3px dashed var(--ac);outline-offset:-3px}
 .col>header.harm{background:var(--as);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}.col>header.harm .t{pointer-events:none}
 .ghost.cg{padding:8px 12px;background:var(--sf);font:650 13px/1.3 system-ui;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis}
-.list{width:calc(var(--z,1)*100%);margin-inline:auto}.col.zlok .sc{overflow-x:hidden!important;overflow-y:auto}.col.zlok .list{touch-action:pan-y}.i.za{color:#00e5ff!important;filter:drop-shadow(0 0 6px #00e5ff)}.i.za svg{stroke:#00e5ff;fill:#00e5ff}.i.zl{opacity:.85}
+.list{width:calc(var(--z,1)*100%);margin:0;transform-origin:top left}.col.zlok .sc{overflow-x:hidden!important;overflow-y:auto}.col.zlok .list{touch-action:pan-y}.i.za{color:var(--ac)!important;background:rgba(140,197,255,.12)}.i.za svg{stroke:currentColor;fill:none}.i.zl{opacity:.9}
 .it textarea{font-size:calc(15px*var(--z,1))}
 #cols.lk .col.zi .sc{overflow-x:auto;overflow-y:hidden}
-.zb .zli{display:none}.zb.zl .zli{display:block}.zb.zl .zni{display:none}.i.zb.zl{color:var(--ac);box-shadow:inset 0 0 0 1px var(--ac)}
+.zb .zli{display:none}.zb.zl .zli{display:block}.zb.zl .zni{display:none}.i.zb.zl{color:var(--ac);background:rgba(140,197,255,.08);box-shadow:inset 0 0 0 1px rgba(140,197,255,.45)}
 .zp{position:fixed;z-index:50;width:min(290px,calc(100vw - 16px));background:var(--sf);border:1px solid var(--ln);border-radius:12px;box-shadow:0 6px 24px #000;padding:10px;display:flex;flex-direction:column;gap:8px}
 .zr{display:flex;align-items:center;gap:8px}.zr.zh{justify-content:space-between}.zh b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.zh output{font:650 13px system-ui;color:var(--ac)}
 .zr input[type=range]{flex:1;min-width:0;height:28px;accent-color:var(--ac);background:none;border:0;padding:0;margin:0}
@@ -128,8 +129,8 @@ html,body{overscroll-behavior:none}
 <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
 <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
 <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-<symbol id="i-zoom" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></symbol>
-<symbol id="i-zoomlock" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><rect x="8" y="10.5" width="6" height="4.5" rx="1"/><path d="M9.2 10.5V9.4a1.8 1.8 0 0 1 3.6 0v1.1"/></symbol>
+<symbol id="i-zoom" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4-4M11 8v6M8 11h6"/></symbol>
+<symbol id="i-zoomlock" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4-4"/><rect x="8.25" y="10.25" width="5.5" height="4.25" rx="1" fill="none"/><path d="M9.4 10.25V9.35a1.6 1.6 0 0 1 3.2 0v.9"/></symbol>
 </defs></svg>
 <main class="app">
 <div class="top"><div class="pt"><button class="b" id="home" title="All projects" aria-label="All projects"><svg class="ic"><use href="#i-left"/></svg></button><h1 id="pn">Side-by-side Reader</h1></div><span class="tr"><button class="b" id="fix" hidden>Reconnect folder</button><small id="state">Loading…</small><button class="b" id="lock" title="Lock columns together" aria-label="Lock columns together" aria-pressed="false"><svg class="ic l"><use href="#i-lock"/></svg><svg class="ic u"><use href="#i-unlock"/></svg></button><button class="b" id="menu" title="Project menu" aria-label="Project menu"><svg class="ic"><use href="#i-dots"/></svg></button></span></div>
@@ -184,7 +185,12 @@ function restore(){if(!st||view!=='proj')return;root.scrollLeft=st.x||0;lw=root.
 let pkT=0,rlT=0;function relax(){if(lkm||fsId||view!=='proj'||root.classList.contains('hold'))return;for(const n of cn()){const l=lst(n),s=scr(n);if(l._pt&&s.scrollTop>=l._pt){const p=l._pt;setPad(l,0,l._pb);s.scrollTop-=p}if(l._pb&&s.scrollTop+s.clientHeight<=padT(l)+natH(l))setPad(l,padT(l),0)}}
 root.addEventListener('scroll',e=>{lastScrollT=performance.now();
 if(g&&g.touch&&(g.k==='pend'||g.k==='arm')&&(e.target===g.sc||e.target===root)){clearTimeout(g.timer);g.el.classList.remove('lift');holdOff();g.k='scroll'}
-if(!ready||Date.now()<mute)return;clearTimeout(sT);sT=setTimeout(capture,120);clearTimeout(pkT);pkT=setTimeout(putK,800);clearTimeout(rlT);rlT=setTimeout(relax,350)},true);
+if(!ready||Date.now()<mute)return;
+/* lighter work while locked so vertical scrolling stays smooth */
+const delay=lkm?220:120;
+clearTimeout(sT);sT=setTimeout(capture,delay);
+clearTimeout(pkT);pkT=setTimeout(putK,lkm?1200:800);
+if(!lkm){clearTimeout(rlT);rlT=setTimeout(relax,350)}},true);
 let rzT=0;addEventListener('resize',()=>{if(view!=='proj'||root.clientWidth===lw)return;mute=Date.now()+600;clearTimeout(rzT);rzT=setTimeout(()=>requestAnimationFrame(restore),90)});
 const leave=()=>{settleEdits();capture();flush(true)};addEventListener('pagehide',leave);document.addEventListener('visibilitychange',()=>{if(document.hidden)leave()});document.addEventListener('freeze',leave);setInterval(()=>{if(ready&&!document.hidden){capture();putK()}},15000);
 /* render */
@@ -210,10 +216,10 @@ function pump(){while(tact<2&&(tq.size||bgQ.length)){tact++;loop().then(()=>{tac
 /* photos on screen first; the rest are prepared one at a time, only while you are not scrolling */
 async function loop(){while(true){
 if(tq.size){const e=[...tq].pop(),id=e[0],im=e[1];tq.delete(id);if(!im.isConnected||!im._w||im.getAttribute('src'))continue;await ensureThumb(id);if(im.isConnected&&im._w&&!im.getAttribute('src')){const u=disp(id);if(u)im.src=u}}
-else if(bgQ.length){if(bgAct)break;if(performance.now()-lastScrollT<500){await new Promise(r=>setTimeout(r,250));continue}bgAct=1;try{await ensureThumb(bgQ.pop())}finally{bgAct=0}}
+else if(bgQ.length){if(bgAct)break;if(performance.now()-lastScrollT<(lkm?900:500)){await new Promise(r=>setTimeout(r,lkm?350:250));continue}bgAct=1;try{await ensureThumb(bgQ.pop())}finally{bgAct=0}}
 else break}}
 function bgGo(){bgQ.length=0;if(!st)return;const seen=new Set;for(const c of st.cols)for(const id of c.ids){if(seen.has(id))continue;seen.add(id);if(!thumbs.has(id)&&!tfail.has(id)&&needTh(items.get(id)))bgQ.push(id)}bgQ.reverse();pump()}
-function mkIO(sc,lk){const A=lk?'120% 60%':'120% 0px',B=lk?'300% 100%':'300% 0px',near=new IntersectionObserver(es=>{for(const x of es){const im=x.target.firstChild;if(!im||!x.isIntersecting)continue;im._w=1;if(!im.getAttribute('src')){const id=x.target.dataset.id,u=disp(id);if(u)im.src=u;else want(id,im)}}},{root:sc,rootMargin:A}),
+function mkIO(sc,lk){const A=lk?'80% 40%':'100% 0px',B=lk?'200% 80%':'250% 0px',near=new IntersectionObserver(es=>{for(const x of es){const im=x.target.firstChild;if(!im||!x.isIntersecting)continue;im._w=1;if(!im.getAttribute('src')){const id=x.target.dataset.id,u=disp(id);if(u)im.src=u;else want(id,im)}}},{root:sc,rootMargin:A}),
 far=new IntersectionObserver(es=>{for(const x of es)if(!x.isIntersecting){const im=x.target.firstChild;if(im){im._w=0;im.removeAttribute('src')}}},{root:sc,rootMargin:B});ios.push(near,far);return e=>{near.observe(e);far.observe(e)}}
 /* text blocks: tap to edit, ✕ cancels, ✓ saves */
 const edits=new Set;
@@ -280,7 +286,7 @@ const vv=window.visualViewport,zoomed=()=>(vv?.scale||1)>1.01,holdOK=()=>!(st&&s
 if(vv){let f=0;vv.addEventListener('resize',()=>{lastScrollT=performance.now();if(f)return;f=requestAnimationFrame(()=>{f=0;document.documentElement.classList.toggle('zm',vv.scale>1.01)})});vv.addEventListener('scroll',()=>{lastScrollT=performance.now()},{passive:true})}
 /* ── lock: ONE scroller moves every column together, so they can never drift. Locking / unlocking never moves a single image ── */
 function lkUI(){const on=!!(st&&st.lk),b=$('#lock'),t=on?'Unlock columns':'Lock columns together';b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);b.title=t;b.setAttribute('aria-label',t);b.disabled=!!fsId}
-function toggleLock(){if(!st||fsId||view!=='proj')return;const ys=curYs();st.lk=!st.lk;applyPos(ys,st.lk);setIO();lkUI();save(1)}
+function toggleLock(){if(!st||fsId||view!=='proj')return;mute=Date.now()+400;const ys=curYs();st.lk=!st.lk;applyPos(ys,st.lk);requestAnimationFrame(()=>{setIO();lkUI()});save(1)}
 $('#lock').onclick=toggleLock;
 /* ── full-screen column (button next to the title; Back / Esc / the same button returns) ── */
 function setFsBtn(n,on){const b=n.querySelector('[data-a="fs"]');if(b){const t=on?'Exit full screen':'Full screen';b.title=t;b.setAttribute('aria-label',t)}}
@@ -295,10 +301,10 @@ function dropFs(){fsId=null;root.classList.remove('fsx');if(fpush){fpush=false;t
 /* ── per-column zoom: pinch on a column (or the zoom button in its header) zooms ONLY that column; the lock freezes it ── */
 const ZMIN=.25,ZMAX=5,Zc=c=>c&&c.z>0?c.z:1,clampZ=v=>Math.min(ZMAX,Math.max(ZMIN,Math.round(v*100)/100));
 function keepZ(cols){for(const c of cols){const o=st.cols.find(x=>x.id===c.id);if(o){c.z=o.z;c.zl=o.zl}}return cols}
-function paintZ(c,n){n=n||colNode(c.id);if(!n)return;const z=Zc(c);lst(n).style.setProperty('--z',z);n.classList.toggle('zi',z>1.001);n.classList.toggle('zlok',!!c.zl);const s=scr(n);if(s){if(c.zl){s.style.overflowX='hidden';s.scrollLeft=0}else if(z>1.001){s.style.overflowX='auto'}else{s.style.overflowX=''}}const b=n.querySelector('[data-a="zm"]');if(b){b.classList.toggle('zl',!!c.zl);const t='Zoom '+Math.round(z*100)+'%'+(c.zl?' (locked)':'');b.title=t;b.setAttribute('aria-label',t)}}
+function paintZ(c,n){n=n||colNode(c.id);if(!n)return;const z=Zc(c);lst(n).style.setProperty('--z',z);n.classList.toggle('zi',z>1.001);n.classList.toggle('zlok',!!c.zl);const s=scr(n);if(s){if(c.zl){s.style.overflowX='hidden';s.scrollLeft=0}else if(z>1.001){s.style.overflowX='auto';/* keep current horizontal position — never jump on unlock */}else{s.style.overflowX='';s.scrollLeft=0}}const b=n.querySelector('[data-a="zm"]');if(b){b.classList.toggle('zl',!!c.zl);b.classList.toggle('za',zAdj===c.id);const t='Zoom '+Math.round(z*100)+'%'+(c.zl?' (locked)':'');b.title=t;b.setAttribute('aria-label',t)}}
 function setZoom(c,z){if(c.zl)return false;z=clampZ(z);if(z===Zc(c))return true;const n=colNode(c.id);if(!n){c.z=z;return true}
-capture();const s=scr(n),w0=s.scrollWidth,fx=w0>s.clientWidth+1?(s.scrollLeft+s.clientWidth/2)/w0:.5;
-c.z=z;paintZ(c,n);refit(n);restore();const w=s.scrollWidth;s.scrollLeft=w>s.clientWidth+1?Math.max(0,fx*w-s.clientWidth/2):0;return true}
+capture();const s=scr(n),w0=s.scrollWidth||1,fx=w0>s.clientWidth+1?(s.scrollLeft+s.clientWidth/2)/w0:.5;
+c.z=z;paintZ(c,n);refit(n);restore();requestAnimationFrame(()=>{const w=s.scrollWidth||1;s.scrollLeft=w>s.clientWidth+1?Math.max(0,fx*w-s.clientWidth/2):0});return true}
 let pin=null,zT=0,wz=null,wzT=0,zlt=0,zpop=null;
 const zlNote=c=>{};
 const pdist=e=>Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)||1;
@@ -318,13 +324,14 @@ function toggleZoomMode(a,c){
   if(!c)return;
   /* if this column is already in adjust mode → lock it and exit adjust */
   if(zAdj===c.id){
-    c.zl=true;paintZ(c);save();
-    a.classList.remove('za');zAdj=null;
+    c.zl=true;zAdj=null;paintZ(c);capture();save();
     return;
   }
-  /* if locked → unlock and enter adjust mode */
+  /* if locked → unlock and enter adjust mode (scrollLeft stays at 0 so images do not jump) */
   if(c.zl){
-    c.zl=false;paintZ(c);save();
+    c.zl=false;
+    paintZ(c);
+    capture();save();
   }
   /* leave any other column's adjust mode */
   if(zAdj&&zAdj!==c.id){
@@ -332,7 +339,6 @@ function toggleZoomMode(a,c){
     if(prev)prev.classList.remove('za');
   }
   zAdj=c.id;a.classList.add('za');
-  /* no popover */
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(zAdj){const b=document.querySelector('.col .i.za');if(b)b.classList.remove('za');zAdj=null}}});
 
