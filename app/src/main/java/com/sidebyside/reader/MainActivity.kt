@@ -122,6 +122,9 @@ class MainActivity : AppCompatActivity() {
         settings.loadWithOverviewMode = true
         settings.javaScriptCanOpenWindowsAutomatically = true
         settings.setSupportMultipleWindows(false)
+        try {
+            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        } catch (_: Exception) {}
 
         try {
             settings.setTextZoom(100)
