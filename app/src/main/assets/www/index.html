@@ -200,12 +200,12 @@ else{root.classList.remove('lk');lkm=false;ns.forEach((n,i)=>placeCol(n,ys[i]));
 function capture(){if(!ready||view!=='proj'||!st||!root.children.length)return;
 if(fsId){const n=colNode(fsId);if(n){const l=lst(n),a=anchorAt(l,scr(n).scrollTop-padT(l));if(a)st.sc[fsId]=a;const s=scr(n),m=s.scrollWidth-s.clientWidth;(st.sx||(st.sx={}))[fsId]=m>1?s.scrollLeft/m:0}return}
 st.x=root.scrollLeft;const ys=curYs();cn().forEach((n,i)=>{const a=anchorAt(lst(n),ys[i]);if(a)st.sc[n.dataset.id]=a;const s=scr(n),m=s.scrollWidth-s.clientWidth;(st.sx||(st.sx={}))[n.dataset.id]=m>1?s.scrollLeft/m:0})}
-function restore(){if(!st||view!=='proj')return;root.scrollLeft=st.x||0;lw=root.clientWidth;applyPos(cn().map(n=>{const y=yOf(lst(n),st.sc[n.dataset.id]);return y==null?0:y}),!!st.lk&&!fsId);cn().forEach(n=>{const s=scr(n),c=col(n.dataset.id);if(c&&c.zl){s.scrollLeft=0;return}const m=s.scrollWidth-s.clientWidth,f=st.sx&&st.sx[n.dataset.id];s.scrollLeft=m>1&&f?f*m:0})}
+function restore(){if(!st||view!=='proj')return;root.scrollLeft=st.x||0;lw=root.clientWidth;applyPos(cn().map(n=>{const y=yOf(lst(n),st.sc[n.dataset.id]);return y==null?0:y}),!!st.lk&&!fsId);cn().forEach(n=>{const s=scr(n),c=col(n.dataset.id),m=s.scrollWidth-s.clientWidth,f=st.sx&&st.sx[n.dataset.id],fromSt=m>1&&f!=null?f*m:0;if(c&&hLocked(c)){if(c._sx==null)c._sx=fromSt;s.scrollLeft=c._sx;return}s.scrollLeft=fromSt;if(c)c._sx=s.scrollLeft})}
 /* blank space left over after an unlock is dropped quietly once you scroll away from it (no visible movement) */
 let pkT=0,rlT=0;function relax(){if(lkm||fsId||view!=='proj'||root.classList.contains('hold'))return;for(const n of cn()){const l=lst(n),s=scr(n);if(l._pt&&s.scrollTop>=l._pt){const p=l._pt;setPad(l,0,l._pb);s.scrollTop-=p}if(l._pb&&s.scrollTop+s.clientHeight<=padT(l)+natH(l))setPad(l,padT(l),0)}}
 root.addEventListener('scroll',e=>{lastScrollT=performance.now();
 /* column zoom locked: never allow horizontal drift */
-if(e.target&&e.target.classList&&e.target.classList.contains('sc')){const colEl=e.target.closest?.('.col');if(colEl&&colEl.classList.contains('zlok')&&e.target.scrollLeft)e.target.scrollLeft=0}
+if(e.target&&e.target.classList&&e.target.classList.contains('sc')){const colEl=e.target.closest?.('.col');if(colEl&&colEl.classList.contains('zlok')){const c=col(colEl.dataset.id),sx=c&&c._sx!=null?c._sx:0;if(e.target.scrollLeft!==sx)e.target.scrollLeft=sx}}
 if(g&&g.touch&&(g.k==='pend'||g.k==='arm')&&(e.target===g.sc||e.target===root)){clearTimeout(g.timer);g.el.classList.remove('lift');holdOff();g.k='scroll'}
 if(!ready||Date.now()<mute)return;
 /* lighter work while locked so vertical scrolling stays smooth */
@@ -328,27 +328,32 @@ function dropFs(){fsId=null;root.classList.remove('fsx');if(fpush){fpush=false;t
 /* ── per-column zoom: pinch on a column (or the zoom button in its header) zooms ONLY that column; the lock freezes it ── */
 const ZMIN=.25,ZMAX=5,Zc=c=>c&&c.z>0?c.z:1,clampZ=v=>Math.min(ZMAX,Math.max(ZMIN,Math.round(v*100)/100));
 function keepZ(cols){for(const c of cols){const o=st.cols.find(x=>x.id===c.id);if(o){c.z=o.z;c.zl=o.zl}}return cols}
-function paintZ(c,n){n=n||colNode(c.id);if(!n)return;const z=Zc(c);const list=lst(n);list.style.setProperty('--z',z);n.classList.toggle('zi',z>1.001);n.classList.toggle('zlok',!!c.zl);const s=scr(n);if(s){if(c.zl){s.style.setProperty('overflow-x','hidden','important');s.style.touchAction='pan-y pinch-zoom';s.scrollLeft=0}else if(z>1.001){s.style.removeProperty('overflow-x');s.style.overflowX='auto';s.style.touchAction=''}else{s.style.removeProperty('overflow-x');s.style.overflowX='';s.style.touchAction='';s.scrollLeft=0}}const b=n.querySelector('[data-a="zm"]');if(b){const onAdj=zAdj===c.id;b.classList.toggle('zl',!!c.zl);if(onAdj)b.classList.add('za');else{b.classList.remove('za');try{b.blur()}catch{}}const t='Zoom '+Math.round(z*100)+'%'+(c.zl?' (locked)':onAdj?' — pinch / Ctrl+scroll':'');b.title=t;b.setAttribute('aria-label',t)}}
-/* block horizontal touch-drag on zoom-locked columns (WebView often ignores overflow-x:hidden) */
+/* horizontal pan ONLY while this column is in adjust mode; otherwise freeze at c._sx */
+function hLocked(c){return!!c&&(!!c.zl||(Zc(c)>1.001&&zAdj!==c.id))}
+function paintZ(c,n){n=n||colNode(c.id);if(!n)return;const z=Zc(c),onAdj=zAdj===c.id,lock=hLocked(c);const list=lst(n);list.style.setProperty('--z',z);n.classList.toggle('zi',z>1.001);n.classList.toggle('zlok',lock);const s=scr(n);if(s){if(lock){if(c._sx==null)c._sx=s.scrollLeft;s.style.setProperty('overflow-x','hidden','important');s.style.touchAction='pan-y pinch-zoom';s.scrollLeft=c._sx}else if(z>1.001){s.style.removeProperty('overflow-x');s.style.overflowX='auto';s.style.touchAction='pan-x pan-y pinch-zoom'}else{s.style.removeProperty('overflow-x');s.style.overflowX='';s.style.touchAction='';s.scrollLeft=0;c._sx=0}}const b=n.querySelector('[data-a="zm"]');if(b){b.classList.toggle('zl',!!c.zl||(z>1.001&&!onAdj));if(onAdj)b.classList.add('za');else{b.classList.remove('za');try{b.blur()}catch{}}const t='Zoom '+Math.round(z*100)+'%'+(lock&&!onAdj?' (locked)':onAdj?' — pinch / pan / Ctrl+scroll':'');b.title=t;b.setAttribute('aria-label',t)}}
+/* block horizontal touch-drag unless column is in adjust mode (WebView often ignores overflow-x:hidden) */
 let zlDrag=null;
 document.addEventListener('touchstart',e=>{
   if(e.touches.length!==1){zlDrag=null;return}
-  const sc=e.target.closest?.('.col.zlok .sc');if(!sc){zlDrag=null;return}
-  zlDrag={sc,x:e.touches[0].clientX,y:e.touches[0].clientY};
+  const colEl=e.target.closest?.('.col');if(!colEl){zlDrag=null;return}
+  const c=col(colEl.dataset.id);if(!c||!hLocked(c)){zlDrag=null;return}
+  const sc=colEl.querySelector('.sc');if(!sc){zlDrag=null;return}
+  zlDrag={sc,c,x:e.touches[0].clientX,y:e.touches[0].clientY,sx:c._sx!=null?c._sx:sc.scrollLeft};
 },{passive:true});
 document.addEventListener('touchmove',e=>{
   if(!zlDrag||e.touches.length!==1)return;
   const t=e.touches[0],dx=Math.abs(t.clientX-zlDrag.x),dy=Math.abs(t.clientY-zlDrag.y);
-  if(dx>3){zlDrag.sc.scrollLeft=0;if(dx>=dy&&e.cancelable)e.preventDefault()}
+  zlDrag.sc.scrollLeft=zlDrag.sx;
+  if(dx>2&&dx>=dy&&e.cancelable)e.preventDefault();
 },{passive:false});
-document.addEventListener('touchend',()=>{zlDrag=null});
-document.addEventListener('touchcancel',()=>{zlDrag=null});
-function setZoom(c,z){if(c.zl)return false;z=clampZ(z);if(z===Zc(c))return true;const n=colNode(c.id);if(!n){c.z=z;return true}
-const s=scr(n),w0=Math.max(1,s.scrollWidth),leftRatio=s.scrollLeft/w0,/* keep vertical anchor */yBefore=lkm?root.scrollTop:s.scrollTop;
+document.addEventListener('touchend',()=>{if(zlDrag){zlDrag.sc.scrollLeft=zlDrag.sx;zlDrag=null}});
+document.addEventListener('touchcancel',()=>{if(zlDrag){zlDrag.sc.scrollLeft=zlDrag.sx;zlDrag=null}});
+function setZoom(c,z){if(hLocked(c)&&zAdj!==c.id)return false;z=clampZ(z);if(z===Zc(c))return true;const n=colNode(c.id);if(!n){c.z=z;return true}
+const s=scr(n),w0=Math.max(1,s.scrollWidth),leftRatio=s.scrollLeft/w0,yBefore=lkm?root.scrollTop:s.scrollTop;
 c.z=z;paintZ(c,n);refit(n);
-/* keep vertical scroll; horizontal grows from left so nothing jumps right */
 if(lkm)root.scrollTop=yBefore;else s.scrollTop=yBefore;
 s.scrollLeft=Math.max(0,leftRatio*Math.max(1,s.scrollWidth));
+c._sx=s.scrollLeft;
 return true}
 let pin=null,zT=0,wz=null,wzT=0,zlt=0,zpop=null;
 const zlNote=c=>{};
@@ -411,7 +416,7 @@ document.addEventListener('touchcancel',()=>{pgPan=null});
 /* desktop: Ctrl + scroll (or trackpad pinch) over a column zooms that column only */
 root.addEventListener('wheel',e=>{if(!e.ctrlKey&&!e.metaKey)return;const n=e.target.closest?.('.col');if(!n)return;e.preventDefault();const c=col(n.dataset.id);if(!c)return;if(zAdj!==c.id)return;/* only while adjust mode */
 const base=wz&&wz.c===c?wz.z:Zc(c);wz={c,z:clampZ(base*Math.pow(1.0015,-e.deltaY*(e.deltaMode===1?16:1)))};
-if(!zT)zT=requestAnimationFrame(()=>{zT=0;if(wz)setZoom(wz.c,wz.z)});clearTimeout(wzT);wzT=setTimeout(()=>{const w=wz;wz=null;if(w&&!w.c.zl){setZoom(w.c,w.z);capture();save()}},350)},{passive:false});
+if(!zT)zT=requestAnimationFrame(()=>{zT=0;if(wz)setZoom(wz.c,wz.z)});clearTimeout(wzT);wzT=setTimeout(()=>{const w=wz;wz=null;if(w&&zAdj===w.c.id){setZoom(w.c,w.z);capture();save()}},350)},{passive:false});
 let zAdj=null; /* column id currently in adjust mode (blue) */
 function closeZoom(){if(zpop){removeEventListener('pointerdown',zpop._h,true);zpop.remove();zpop=null}zAdj=null;document.querySelectorAll('.col .i.za').forEach(b=>b.classList.remove('za'))}
 function clearZa(btn){
@@ -423,24 +428,21 @@ function clearZa(btn){
   /* force style recalc so sticky mobile hover cannot keep the accent colour */
   if(btn){btn.style.color='';btn.style.background='';void btn.offsetWidth}
 }
+function freezeColH(c){const n=colNode(c.id),s=n&&scr(n);if(s)c._sx=s.scrollLeft;if(Zc(c)>1.001)c.zl=true}
 function toggleZoomMode(a,c){
   if(!c)return;
-  /* already in adjust mode → exit adjust (do NOT auto-lock). Icon returns to normal immediately. */
+  /* already in adjust mode → exit: freeze current horizontal position, only vertical scroll after */
   if(zAdj===c.id){
-    zAdj=null;clearZa(a);paintZ(c);capture();save();
+    freezeColH(c);zAdj=null;clearZa(a);paintZ(c);capture();save();
     return;
   }
-  /* locked → unlock, stay out of adjust so colour returns to normal */
-  if(c.zl){
-    c.zl=false;zAdj=null;clearZa(a);paintZ(c);capture();save();
-    return;
-  }
-  /* leave any other column's adjust mode first */
+  /* leave any other column's adjust mode first (freeze that one too) */
   if(zAdj&&zAdj!==c.id){
-    const prevId=zAdj;zAdj=null;clearZa();
-    const prevC=col(prevId);if(prevC)paintZ(prevC);
+    const prevId=zAdj,prevC=col(prevId);zAdj=null;clearZa();
+    if(prevC){freezeColH(prevC);paintZ(prevC)}
   }
-  zAdj=c.id;a.classList.add('za');paintZ(c);
+  /* enter adjust mode: unlock horizontal so user can pan/zoom */
+  c.zl=false;zAdj=c.id;a.classList.add('za');paintZ(c);
 }
 /* long-press zoom button → toggle lock (freeze / unfreeze this column's zoom) */
 let zmHold=null,zmDidHold=false;
