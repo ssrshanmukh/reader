@@ -153,10 +153,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadApp() {
-        // Load the local PWA from assets
-        binding.webView.loadUrl("file:///android_asset/www/index.html")
+    /**
+     * Detect a brand-new install (or reinstall after uninstall).
+     * Android may restore WebView localStorage via backup; we compare
+     * PackageInfo.firstInstallTime so every fresh install shows the setup popup.
+     */
+    private fun isFreshInstall(): Boolean {
+        val prefs = getSharedPreferences("sbs_install", MODE_PRIVATE)
+        val info = packageManager.getPackageInfo(packageName, 0)
+        val firstInstallTime = info.firstInstallTime
+        val remembered = prefs.getLong("first_install_time", -1L)
+        if (remembered != firstInstallTime) {
+            prefs.edit().putLong("first_install_time", firstInstallTime).apply()
+            return true
+        }
+        return false
     }
+
+    private fun loadApp() {
+        // On every new install / reinstall, force the first-run setup popup
+        val url = if (isFreshInstall()) {
+            "file:///android_asset/www/index.html?forceSetup=1"
+        } else {
+            "file:///android_asset/www/index.html"
+        }
+        binding.webView.loadUrl(url)
+    }
+
 
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent == null) return

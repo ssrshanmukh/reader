@@ -696,7 +696,14 @@ if(!db)toast('Saving is unavailable in this browser mode. Use ⋮ → Export all
 if(setup==='folder'&&!dirH&&canDir())toast('Storage folder needs to be chosen again: ⋮ → Set storage path…');
 if(dirH&&setup==='folder'){fl();if(!await hasPerm())setFix(true);else lab.textContent='Saved to '+dirH.name}else lab.textContent=db?'Saved on this device':'Saved in this session';
 const sp=new URLSearchParams(location.search),inbox=sp.get('inbox')==='1';
-let first=false;if(!setup){first=true;await runSetup(true)}
+let first=false;
+const forceSetup=sp.get('forceSetup')==='1';
+if(forceSetup){
+  setup=null;
+  try{localStorage.removeItem('sbs-setup')}catch{}
+  try{if(db){const tx=db.transaction('k','readwrite');tx.objectStore('k').delete('setup');await new Promise((ok,no)=>{tx.oncomplete=ok;tx.onerror=()=>no(tx.error)})}}catch{}
+}
+if(!setup||forceSetup){first=true;await runSetup(true)}
 fl();
 if(!st&&first&&projs.length===1)st=projs[0];
 if(st)openP(st.id);else goHome();
