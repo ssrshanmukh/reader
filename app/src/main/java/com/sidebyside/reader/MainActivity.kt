@@ -143,20 +143,20 @@ class MainActivity : AppCompatActivity() {
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
 
         webView.webViewClient = object : WebViewClient() {
+            // Return the asset-loader response, or null so WebView handles the request itself.
+            // Do not call super.shouldInterceptRequest — it is overload-ambiguous in Kotlin.
             override fun shouldInterceptRequest(
-                view: WebView?,
-                request: WebResourceRequest?
+                view: WebView,
+                request: WebResourceRequest
             ): WebResourceResponse? {
-                if (request == null) return super.shouldInterceptRequest(view, request)
-                val response = assetLoader.shouldInterceptRequest(request.url)
-                return response ?: super.shouldInterceptRequest(view, request)
+                return assetLoader.shouldInterceptRequest(request.url)
             }
 
             override fun shouldOverrideUrlLoading(
-                view: WebView?,
-                request: WebResourceRequest?
+                view: WebView,
+                request: WebResourceRequest
             ): Boolean {
-                val url = request?.url?.toString() ?: return false
+                val url = request.url.toString()
                 // Keep local / asset navigation inside the WebView
                 if (url.startsWith("https://$ASSET_DOMAIN/") ||
                     url.startsWith("file://") ||
@@ -174,18 +174,16 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onReceivedError(
-                view: WebView?,
-                request: WebResourceRequest?,
-                error: WebResourceError?
+                view: WebView,
+                request: WebResourceRequest,
+                error: WebResourceError
             ) {
-                super.onReceivedError(view, request, error)
-                if (request?.isForMainFrame == true) {
-                    Log.e(TAG, "Main frame error: ${error?.description} code=${error?.errorCode} url=${request.url}")
+                if (request.isForMainFrame) {
+                    Log.e(TAG, "Main frame error: ${error.description} code=${error.errorCode} url=${request.url}")
                 }
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
                 Log.d(TAG, "Page finished: $url")
             }
         }
