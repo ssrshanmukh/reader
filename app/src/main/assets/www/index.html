@@ -311,7 +311,7 @@ document.addEventListener('touchend',e=>{if(pin&&e.touches.length<2)pinEnd()});d
 /* desktop: Ctrl + scroll (or trackpad pinch) over a column zooms that column only */
 root.addEventListener('wheel',e=>{if(!e.ctrlKey&&!e.metaKey)return;const n=e.target.closest?.('.col');if(!n)return;e.preventDefault();const c=col(n.dataset.id);if(!c)return;if(zAdj!==c.id)return;/* only while adjust mode */
 const base=wz&&wz.c===c?wz.z:Zc(c);wz={c,z:clampZ(base*Math.pow(1.0015,-e.deltaY*(e.deltaMode===1?16:1)))};
-if(!zT)zT=requestAnimationFrame(()=>{zT=0;if(wz)setZoom(wz.c,wz.z)});clearTimeout(wzT);wzT=setTimeout(()=>{const w=wz;wz=null;if(w&&!w.c.zl){setZoom(w.c,w.z);capture();save()},350)},{passive:false});
+if(!zT)zT=requestAnimationFrame(()=>{zT=0;if(wz)setZoom(wz.c,wz.z)});clearTimeout(wzT);wzT=setTimeout(()=>{const w=wz;wz=null;if(w&&!w.c.zl){setZoom(w.c,w.z);capture();save()}},350)},{passive:false});
 let zAdj=null; /* column id currently in adjust mode (blue) */
 function closeZoom(){if(zpop){removeEventListener('pointerdown',zpop._h,true);zpop.remove();zpop=null}zAdj=null;document.querySelectorAll('.col .i.za').forEach(b=>b.classList.remove('za'))}
 function toggleZoomMode(a,c){
