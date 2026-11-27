@@ -198,9 +198,9 @@ if(lock){const hd=ns[0].querySelector('header'),vh=root.clientHeight-(hd?hd.offs
 ns.forEach((n,i)=>{const T=S-ys[i];setPad(lst(n),T,S+vh-T-hs[i])});root.classList.add('lk');lkm=true;root.scrollTop=S}
 else{root.classList.remove('lk');lkm=false;ns.forEach((n,i)=>placeCol(n,ys[i]));root.scrollTop=0}}
 function capture(){if(!ready||view!=='proj'||!st||!root.children.length)return;
-if(fsId){const n=colNode(fsId);if(n){const l=lst(n),a=anchorAt(l,scr(n).scrollTop-padT(l));if(a)st.sc[fsId]=a;const s=scr(n),m=s.scrollWidth-s.clientWidth;(st.sx||(st.sx={}))[fsId]=m>1?s.scrollLeft/m:0}return}
-st.x=root.scrollLeft;const ys=curYs();cn().forEach((n,i)=>{const a=anchorAt(lst(n),ys[i]);if(a)st.sc[n.dataset.id]=a;const s=scr(n),m=s.scrollWidth-s.clientWidth;(st.sx||(st.sx={}))[n.dataset.id]=m>1?s.scrollLeft/m:0})}
-function restore(){if(!st||view!=='proj')return;root.scrollLeft=st.x||0;lw=root.clientWidth;applyPos(cn().map(n=>{const y=yOf(lst(n),st.sc[n.dataset.id]);return y==null?0:y}),!!st.lk&&!fsId);cn().forEach(n=>{const s=scr(n),c=col(n.dataset.id),m=s.scrollWidth-s.clientWidth,f=st.sx&&st.sx[n.dataset.id],fromSt=m>1&&f!=null?f*m:0;if(c&&hLocked(c)){if(c._sx==null)c._sx=fromSt;s.scrollLeft=c._sx;return}s.scrollLeft=fromSt;if(c)c._sx=s.scrollLeft})}
+if(fsId){const n=colNode(fsId);if(n){const l=lst(n),s=scr(n),a=anchorAt(l,s.scrollTop-padT(l));if(a)st.sc[fsId]=a;/* left-edge as fraction of content width — stable when viewport width changes (normal ↔ full-screen) */const sw=Math.max(1,s.scrollWidth);(st.sx||(st.sx={}))[fsId]=s.scrollLeft/sw}return}
+st.x=root.scrollLeft;const ys=curYs();cn().forEach((n,i)=>{const a=anchorAt(lst(n),ys[i]);if(a)st.sc[n.dataset.id]=a;const s=scr(n),sw=Math.max(1,s.scrollWidth);(st.sx||(st.sx={}))[n.dataset.id]=s.scrollLeft/sw})}
+function restore(){if(!st||view!=='proj')return;root.scrollLeft=st.x||0;lw=root.clientWidth;applyPos(cn().map(n=>{const y=yOf(lst(n),st.sc[n.dataset.id]);return y==null?0:y}),!!st.lk&&!fsId);cn().forEach(n=>{const s=scr(n),c=col(n.dataset.id),sw=Math.max(1,s.scrollWidth),f=st.sx&&st.sx[n.dataset.id],fromSt=f!=null?f*sw:0;if(c&&hLocked(c)){if(c._sx==null)c._sx=fromSt;s.scrollLeft=c._sx;return}s.scrollLeft=fromSt;if(c)c._sx=s.scrollLeft})}
 /* blank space left over after an unlock is dropped quietly once you scroll away from it (no visible movement) */
 let pkT=0,rlT=0;function relax(){if(lkm||fsId||view!=='proj'||root.classList.contains('hold'))return;for(const n of cn()){const l=lst(n),s=scr(n);if(l._pt&&s.scrollTop>=l._pt){const p=l._pt;setPad(l,0,l._pb);s.scrollTop-=p}if(l._pb&&s.scrollTop+s.clientHeight<=padT(l)+natH(l))setPad(l,padT(l),0)}}
 root.addEventListener('scroll',e=>{lastScrollT=performance.now();
@@ -318,11 +318,44 @@ $('#lock').onclick=toggleLock;
 /* ── full-screen column (button next to the title; Back / Esc / the same button returns) ── */
 function setFsBtn(n,on){const b=n.querySelector('[data-a="fs"]');if(b){const t=on?'Exit full screen':'Full screen';b.title=t;b.setAttribute('aria-label',t)}}
 function refit(n){if(!FS)n.querySelectorAll('textarea').forEach(t=>{t.style.height='auto';t.style.height=t.scrollHeight+'px'})}
-function enterFs(id){if(fsId||view!=='proj')return;const n=colNode(id);if(!n)return;capture();fsId=id;root.classList.add('fsx');n.classList.add('full','fsin');setFsBtn(n,true);
-n.addEventListener('animationend',()=>n.classList.remove('fsin'),{once:true});refit(n);restore();setIO();lkUI();
-if(!fpush){try{history.pushState({f:1},'');fpush=true}catch{}}}
-function exitFs(){if(!fsId)return;const id=fsId,n=colNode(id);capture();fsId=null;root.classList.remove('fsx');
-if(n){n.classList.remove('full','fsin');setFsBtn(n,false);refit(n)}restore();setIO();lkUI();save(1)}
+/* snapshot the content point currently under the centre of a column's scroller (used so FS enter/exit does not jump) */
+function viewCenter(n){const s=scr(n);if(!s)return null;const l=lst(n),sw=Math.max(1,s.scrollWidth),sh=Math.max(1,s.scrollHeight);
+  return{xf:(s.scrollLeft+s.clientWidth/2)/sw, yf:(s.scrollTop+s.clientHeight/2)/sh, a:anchorAt(l,s.scrollTop-padT(l))}}
+function applyViewCenter(n,vc){if(!n||!vc)return;const s=scr(n),l=lst(n);if(!s)return;
+  /* vertical: prefer item anchor (survives reflow); fall back to fraction */
+  let y=vc.a?yOf(l,vc.a):null;
+  if(y==null)y=vc.yf*Math.max(1,s.scrollHeight)-s.clientHeight/2;
+  s.scrollTop=Math.max(0,y);
+  /* horizontal: content-fraction of the centre, independent of viewport width */
+  const sw=Math.max(1,s.scrollWidth);
+  s.scrollLeft=Math.max(0,vc.xf*sw-s.clientWidth/2);
+  const c=col(n.dataset.id);if(c)c._sx=s.scrollLeft}
+function enterFs(id){if(fsId||view!=='proj')return;const n=colNode(id);if(!n)return;
+  capture();
+  const vc=viewCenter(n); /* exact centre before size change */
+  const c=col(id);
+  fsId=id;root.classList.add('fsx');n.classList.add('full','fsin');setFsBtn(n,true);
+  n.addEventListener('animationend',()=>n.classList.remove('fsin'),{once:true});
+  refit(n);
+  if(c)paintZ(c,n); /* re-apply zoom/overflow styles for the new full width */
+  /* force layout, then put the same content centre back under the eye */
+  void n.offsetWidth;
+  applyViewCenter(n,vc);
+  /* also keep st.sc / st.sx in sync for later restores */
+  if(vc&&vc.a)st.sc[id]=vc.a;
+  const s=scr(n);if(s){(st.sx||(st.sx={}))[id]=s.scrollLeft/Math.max(1,s.scrollWidth)}
+  setIO();lkUI();
+  if(!fpush){try{history.pushState({f:1},'');fpush=true}catch{}}}
+function exitFs(){if(!fsId)return;const id=fsId,n=colNode(id);
+  const vc=n?viewCenter(n):null;
+  capture();fsId=null;root.classList.remove('fsx');
+  if(n){n.classList.remove('full','fsin');setFsBtn(n,false);refit(n);const c=col(id);if(c)paintZ(c,n)}
+  restore();
+  /* after restore has laid out the normal-size column, re-centre the same content point so nothing jumps */
+  if(n&&vc){void n.offsetWidth;applyViewCenter(n,vc);
+    if(vc.a)st.sc[id]=vc.a;
+    const s=scr(n);if(s){(st.sx||(st.sx={}))[id]=s.scrollLeft/Math.max(1,s.scrollWidth);const c=col(id);if(c)c._sx=s.scrollLeft}}
+  setIO();lkUI();save(1)}
 function exitFsUI(){if(!fsId)return;if(fpush){fpush=false;history.back()}else exitFs()}
 function dropFs(){fsId=null;root.classList.remove('fsx');if(fpush){fpush=false;try{history.back()}catch{}}}
 /* ── per-column zoom: pinch on a column (or the zoom button in its header) zooms ONLY that column; the lock freezes it ── */
