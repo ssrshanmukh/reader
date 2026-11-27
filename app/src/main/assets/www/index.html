@@ -349,10 +349,16 @@ document.addEventListener('touchmove',e=>{
 document.addEventListener('touchend',()=>{if(zlDrag){zlDrag.sc.scrollLeft=zlDrag.sx;zlDrag=null}});
 document.addEventListener('touchcancel',()=>{if(zlDrag){zlDrag.sc.scrollLeft=zlDrag.sx;zlDrag=null}});
 function setZoom(c,z){if(hLocked(c)&&zAdj!==c.id)return false;z=clampZ(z);if(z===Zc(c))return true;const n=colNode(c.id);if(!n){c.z=z;return true}
-const s=scr(n),w0=Math.max(1,s.scrollWidth),leftRatio=s.scrollLeft/w0,yBefore=lkm?root.scrollTop:s.scrollTop;
+const s=scr(n),oldZ=Zc(c)||1,ratio=z/oldZ;
+/* keep the current visual centre fixed so zooming does not feel like scrolling */
+const cx=s.scrollLeft+s.clientWidth/2,cy=s.scrollTop+s.clientHeight/2;
+const yBefore=lkm?root.scrollTop:null;
 c.z=z;paintZ(c,n);refit(n);
-if(lkm)root.scrollTop=yBefore;else s.scrollTop=yBefore;
-s.scrollLeft=Math.max(0,leftRatio*Math.max(1,s.scrollWidth));
+if(lkm&&yBefore!=null)root.scrollTop=yBefore;
+else{
+  s.scrollLeft=Math.max(0,cx*ratio-s.clientWidth/2);
+  s.scrollTop=Math.max(0,cy*ratio-s.clientHeight/2);
+}
 c._sx=s.scrollLeft;
 return true}
 let pin=null,zT=0,wz=null,wzT=0,zlt=0,zpop=null;
@@ -396,19 +402,40 @@ function pgEnd(){
 document.addEventListener('touchend',e=>{if(pg&&e.touches.length<2)pgEnd()});
 document.addEventListener('touchcancel',()=>{if(pg)pgEnd()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pageS>1.01&&!zAdj){pageS=1;pageX=0;pageY=0;applyPageZ()}});
-/* one-finger pan while page is zoomed */
+/* one-finger pan while page is zoomed.
+   Prefer letting the column (or locked root) scroll vertically when it still has room;
+   only take over for page-pan when the scroller is at its edge or the gesture is mostly horizontal.
+   This lets you keep scrolling content even after whole-page zoom. */
 let pgPan=null;
 document.addEventListener('touchstart',e=>{
   if(e.touches.length!==1||pageS<=1.01||pin||zAdj||pg)return;
   if(e.target.closest?.('#v'))return;
-  const t=e.touches[0];pgPan={x:t.clientX,y:t.clientY,x0:pageX,y0:pageY};
+  const t=e.touches[0];
+  const sc=e.target.closest?.('.sc')||(lkm?root:null);
+  let maxY=0,curY=0,canY=false;
+  if(sc){curY=sc.scrollTop;maxY=Math.max(0,sc.scrollHeight-sc.clientHeight);canY=maxY>2}
+  pgPan={x:t.clientX,y:t.clientY,x0:pageX,y0:pageY,sc,curY,maxY,canY,took:false};
 },{passive:true});
 document.addEventListener('touchmove',e=>{
   if(!pgPan||e.touches.length!==1)return;
-  if(e.cancelable)e.preventDefault();
   const t=e.touches[0];
-  pageX=pgPan.x0+(t.clientX-pgPan.x);
-  pageY=pgPan.y0+(t.clientY-pgPan.y);
+  const dx=t.clientX-pgPan.x,dy=t.clientY-pgPan.y;
+  /* decide once whether this gesture is a page-pan or an internal scroll */
+  if(!pgPan.took){
+    const mostlyH=Math.abs(dx)>Math.abs(dy)*1.2;
+    const atTop=pgPan.canY&&pgPan.sc&&pgPan.sc.scrollTop<=2;
+    const atBot=pgPan.canY&&pgPan.sc&&pgPan.sc.scrollTop>=pgPan.maxY-2;
+    /* take over for pan only if horizontal-dominant, or vertical overscroll at edge, or no scrollable */
+    const overscroll=(dy>4&&atTop)||(dy<-4&&atBot);
+    if(mostlyH||overscroll||!pgPan.canY){pgPan.took=true}
+    else{
+      /* let the scroller handle vertical scroll — do not preventDefault */
+      return;
+    }
+  }
+  if(e.cancelable)e.preventDefault();
+  pageX=pgPan.x0+dx;
+  pageY=pgPan.y0+dy;
   if(!pgRaf){pgRaf=requestAnimationFrame(()=>{pgRaf=0;applyPageZ()})}
 },{passive:false});
 document.addEventListener('touchend',()=>{pgPan=null});
